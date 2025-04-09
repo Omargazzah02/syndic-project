@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,9 +30,33 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+
+
+
+
+
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),  # <- C’est probablement ça qui est trop court
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+}
+
+
+
+
+
+
+
+
+
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
     'properties_app',
     'auth_app',
     'residences_app',
@@ -42,7 +68,15 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
+
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Next.js
+]
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

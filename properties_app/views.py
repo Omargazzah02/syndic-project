@@ -18,4 +18,10 @@ class PropertiesListView (generics.ListAPIView) :
             
 
     
-    
+
+class PropertyDetailsView (generics.ListAPIView) : 
+   permission_classes = [IsOwner , IsAuthenticated] 
+   def get (self , request , property_id) : 
+      property = Property.objects.get(id = property_id)
+      serializer = PropertySerializer(property)
+      return Response(serializer.data)
