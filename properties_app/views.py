@@ -1,11 +1,12 @@
 
 from django.shortcuts import render
-from rest_framework import generics
+from rest_framework import generics , status
 from auth_app.permissions import IsOwner
 from rest_framework.permissions import IsAuthenticated
 from .models import Property
 from .serializers import PropertySerializer
 from rest_framework.response import Response
+
 
 
 
@@ -23,6 +24,9 @@ class PropertiesListView (generics.ListAPIView) :
 class PropertyDetailsView (generics.ListAPIView) : 
    permission_classes = [IsOwner , IsAuthenticated] 
    def get (self , request , property_id) : 
-      property = Property.objects.get(id = property_id)
+      property = Property.objects.get(id = property_id , owner = request.user)
+      if property is None :
+         return Response({"error": "Ce bien n'existe pas !"}, status=status.HTTP_404_NOT_FOUND)
+      
       serializer = PropertySerializer(property)
       return Response(serializer.data)
