@@ -2,22 +2,17 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import CustomUser
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsOwner, IsManager, IsAdmin
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
+from .serializers import UserSerializer
 
 
 
 
 
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
-from django.contrib.auth import authenticate
-from rest_framework_simplejwt.tokens import RefreshToken
+
 
 class LoginView(APIView):
     def post(self, request):
@@ -71,3 +66,13 @@ class ModifyPasswordView(APIView):
         user.save()
         
         return Response({"message": "Mot de passe modifié avec succès."}, status=status.HTTP_200_OK)
+    
+
+
+
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
