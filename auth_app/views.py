@@ -6,6 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from .permissions import IsOwner, IsManager, IsAdmin
 from rest_framework import status
 from .serializers import UserSerializer
+from django.contrib.auth import get_user_model
+
 
 
 
@@ -66,6 +68,43 @@ class ModifyPasswordView(APIView):
         user.save()
         
         return Response({"message": "Mot de passe modifié avec succès."}, status=status.HTTP_200_OK)
+    
+
+
+
+
+
+class UpdateProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        data = request.data
+
+        # Extract fields from request
+        username = data.get("username")
+        email = data.get("email")
+        phone = data.get("phone")
+
+        # Optional: validate required fields
+        if not username or  not email:
+            return Response(
+                {"error": "First name, last name, and email are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update user fields
+        user.username = username
+        user.email = email
+        user.phone = phone  # Ensure this field exists in your CustomUser model
+
+        user.save()
+
+        return Response(
+            {"message": "Profile updated successfully."},
+            status=status.HTTP_200_OK
+        )
+
     
 
 
