@@ -24,12 +24,10 @@ class Property(models.Model):
     created_at = models.DateField(auto_now_add=True)
     
     number_of_rooms = models.IntegerField()
-    
-    general_quota = models.IntegerField(
-        choices=[(i, i) for i in range(1, 101)], 
-        default=1
-    )
-    
+
+    part_percentage = models.FloatField(default=0.0 )
+
+ 
     def __str__(self):
         return f"Property {self.property_number} - {self.property_type}"
 

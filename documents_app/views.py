@@ -13,8 +13,8 @@ class CategoryDocumentsListView (APIView) :
     permission_classes = [IsOwner , IsAuthenticated]
     def get(self, request , residence_id ) :
        residence = Residence.objects.filter(
-        id=residence_id,
-        properties__owner=request.user
+       id=residence_id,
+       properties__owner=request.user
       ).first()
        if residence is None:
          return Response({"error": "Cette résidance n'existe pas."}, status=status.HTTP_404_NOT_FOUND)
