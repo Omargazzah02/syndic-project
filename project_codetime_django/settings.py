@@ -55,7 +55,9 @@ SIMPLE_JWT = {
 
 # Application definition
 
+
 INSTALLED_APPS = [
+    'charges_app',
     'documents_app',
     'corsheaders',
     'properties_app',
@@ -193,6 +195,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

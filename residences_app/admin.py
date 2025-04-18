@@ -7,6 +7,8 @@ class PropertyInline(admin.TabularInline):
     model = Property
     fields = ('part_percentage',)
     extra = 0
+    def has_add_permission(self, request, obj=None):
+        return False  # Cela supprime le bouton "Add another Property"
 
     def get_formset(self, request, obj=None, **kwargs):
         formset = super().get_formset(request, obj, **kwargs)

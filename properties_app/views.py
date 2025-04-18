@@ -29,4 +29,4 @@ class PropertyDetailsView (generics.ListAPIView) :
          return Response({"error": "Ce bien n'existe pas !"}, status=status.HTTP_404_NOT_FOUND)
       
       serializer = PropertySerializer(property)
-      return Response(serializer.data)
+      return Response(serializer.data , status=200) 
