@@ -17,4 +17,8 @@ class Document (models.Model) :
     category = models.CharField(max_length=100 , choices=CATEGORY_CHOICES)
     title = models.CharField(max_length=100)
     pdf_file = models.FileField(upload_to='pdfs/',  validators=[FileExtensionValidator(allowed_extensions=['pdf'])] ,)
+    date_creation = models.DateTimeField(auto_now_add=True)
 
+
+    def __str__(self):
+        return self.title

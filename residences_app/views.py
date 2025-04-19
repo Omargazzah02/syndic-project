@@ -27,7 +27,7 @@ class ResidenceDetailsView (generics.ListAPIView) :
        return Response({"error": "Cette résidance n'existe pas."}, status=status.HTTP_404_NOT_FOUND)
 
     serializer = ResidenceSerializer (residence)
-    return Response(serializer.data)
+    return Response(serializer.data , status=200)
   
 
 
