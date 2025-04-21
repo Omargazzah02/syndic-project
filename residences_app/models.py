@@ -1,4 +1,7 @@
 from django.db import models
+from choices import CHARGE_CATEGORIES
+from django.core.exceptions import ValidationError
+
 
 class Residence (models.Model):
     residence_name = models.CharField(max_length=100)
@@ -14,6 +17,4 @@ class Residence (models.Model):
 
     def __str__(self):
         return self.residence_name
-
-
- 
+    
