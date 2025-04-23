@@ -18,3 +18,6 @@ class Residence (models.Model):
     def __str__(self):
         return self.residence_name
     
+
+
+

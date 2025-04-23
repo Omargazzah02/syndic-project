@@ -63,6 +63,31 @@ class GetContactManagers (generics.ListAPIView) :
 
 
 
+
+class IsManagerView (generics.ListAPIView)  :
+   permission_classes = [IsAuthenticated]
+
+   def get (self , request , residence_id)  : 
+     residence = Residence.objects.get(id = residence_id)
+     if residence is None:
+          return Response({"error": "Cette résidance n'existe pas."}, status=status.HTTP_404_NOT_FOUND)
+     
+     managers = residence.managers.all()
+
+     exists =  managers.filter(id=request.user.id).exists()
+
+     data = {"is_manager" : exists}
+     print(data)
+     return Response(data )
+
+
+
+
+
+
+
+       
+
       
     
       

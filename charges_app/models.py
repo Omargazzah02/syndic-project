@@ -8,6 +8,8 @@ class Charge (models.Model) :
     residence = models.ForeignKey(Residence, on_delete=models.CASCADE, related_name='charges')
     title = models.CharField(max_length=100)
     category= models.CharField(max_length=50, choices=CHARGE_CATEGORIES)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
 
     price = models.FloatField()
 
