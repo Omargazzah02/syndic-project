@@ -11,7 +11,7 @@ class InterventionListByResidenceAPIView(APIView):
     def get(self, request, residence_id):
         status_param = request.query_params.get('status')
 
-        interventions = Intervention.objects.filter(user=request.user, residence_id=residence_id)
+        interventions = Intervention.objects.filter( residence_id=residence_id)
         if status_param:
             interventions = interventions.filter(status=status_param)
 
