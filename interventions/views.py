@@ -4,9 +4,13 @@ from rest_framework import status, permissions
 from .models import Intervention
 from .serializers import InterventionSerializer
 from rest_framework.permissions import IsAuthenticated
+from auth_app.permissions import IsOwner , IsManager
+from charges_app.models import Charge
+from django.views.decorators.csrf import csrf_exempt
+
 
 class InterventionListByResidenceAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated , IsOwner]
 
     def get(self, request, residence_id):
         status_param = request.query_params.get('status')
@@ -16,12 +20,15 @@ class InterventionListByResidenceAPIView(APIView):
             interventions = interventions.filter(status=status_param)
 
         serializer = InterventionSerializer(interventions.order_by('-created_at'), many=True)
-        return Response(serializer.data)
+        data = serializer.data
+      
+
+        return Response(data)
 
 
 
 class CreateInterventionAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated , IsOwner]
 
     def post(self, request):
         serializer = InterventionSerializer(data=request.data)
@@ -29,26 +36,6 @@ class CreateInterventionAPIView(APIView):
             serializer.save(user=request.user)  # 🟢 Set user manually here
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-
-class UpdateInterventionStatus(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def patch(self, request, intervention_id):
-        try:
-            intervention = Intervention.objects.get(id=intervention_id)
-            new_status = request.data.get('status')
-            if new_status:
-                intervention.status = new_status
-                intervention.save()
-                return Response({"message": "Statut mis à jour"}, status=status.HTTP_200_OK)
-            else:
-                return Response({"error": "Statut manquant"}, status=status.HTTP_400_BAD_REQUEST)
-        except Intervention.DoesNotExist:
-            return Response({"error": "Intervention non trouvée"}, status=status.HTTP_404_NOT_FOUND)
 
 
 
@@ -63,3 +50,81 @@ class InterventionDetail(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Intervention.DoesNotExist:
             return Response({'error': 'Intervention non trouvée'}, status=404)
+
+
+
+class AcceptInterventionView(APIView) : 
+       permission_classes = [IsAuthenticated , IsManager ]
+       
+       def post(self , request , intervention_id ) : 
+         intervention = Intervention.objects.get(id = intervention_id)
+         if intervention is None:
+           return Response({"error": "Cette intervention n'existe pas."}, status=status.HTTP_404_NOT_FOUND)
+         
+         managers = intervention.residence.managers.all()
+
+         exists =  managers.filter(id=request.user.id).exists()
+         
+         if (exists is not True  ) : 
+              return Response({"error": "Vous n'avez pas un manager dans cette résidance."}, status=status.HTTP_401_UNAUTHORIZED)
+         
+         title = request.data.get("charge_title")
+         category =request.data.get("category")
+         price = request.data.get("charge_price")
+
+         intervention.status = "en_cours"
+         intervention.save()
+
+         Charge.objects.create(residence = intervention.residence , title = title , category = category , price = price  )
+
+         return Response({"message":"Vous avez confimé cette intervention avec succées"}, status=status.HTTP_200_OK)
+
+
+
+
+class RefuseInterventionView (APIView) :
+     permission_classes = [IsAuthenticated , IsManager ]
+       
+     def post(self , request , intervention_id ) : 
+         intervention = Intervention.objects.get(id = intervention_id)
+         if intervention is None:
+           return Response({"error": "Cette intervention n'existe pas."}, status=status.HTTP_404_NOT_FOUND)
+         
+         managers = intervention.residence.managers.all()
+
+         exists =  managers.filter(id=request.user.id).exists()
+         
+         if (exists is not True  ) : 
+              return Response({"error": "Vous n'avez pas un manager dans cette résidance."}, status=status.HTTP_401_UNAUTHORIZED)
+         
+         intervention.status = "refusée"
+         intervention.save()
+         return Response({"message":"Vous avez refusé cette intervention"}, status=status.HTTP_200_OK)
+
+
+
+class TerminateInterventionView (APIView) :
+     permission_classes = [IsAuthenticated , IsManager ]
+       
+     def post(self , request , intervention_id ) : 
+         intervention = Intervention.objects.get(id = intervention_id)
+         if intervention is None:
+           return Response({"error": "Cette intervention n'existe pas."}, status=status.HTTP_404_NOT_FOUND)
+         
+         managers = intervention.residence.managers.all()
+
+         exists =  managers.filter(id=request.user.id).exists()
+         
+         if (exists is not True  ) : 
+              return Response({"error": "Vous n'avez pas un manager dans cette résidance."}, status=status.HTTP_401_UNAUTHORIZED)
+         
+         intervention.status = "terminée"
+         intervention.save()
+         return Response({"message":"Vous avez terminée cette intervention"}, status=status.HTTP_200_OK)
+
+
+
+
+
+
+             

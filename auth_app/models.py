@@ -13,7 +13,7 @@ class CustomUser(AbstractUser):
     ]
     
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='owner')
-    phone = models.CharField(max_length=30)
+    phone = models.CharField(max_length=30 , blank=True)
 
     residence = models.ForeignKey(
         Residence,
@@ -34,9 +34,10 @@ class CustomUser(AbstractUser):
     def save(self, *args, **kwargs):
         # Si l'utilisateur a un mot de passe non haché, on le hache ici
         self.full_clean()  # Appelle clean() automatiquement
-
         if self.password and not self.password.startswith('pbkdf2_'):
-            self.password = make_password(self.password)
+           self.password = make_password(self.password)
+
+    
 
         if self.is_superuser and self.role != 'admin':
             self.role = 'admin'

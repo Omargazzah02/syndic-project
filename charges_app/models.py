@@ -23,7 +23,7 @@ class Charge (models.Model) :
          for property in properties :
              part_percentage = property.category_shares.get(self.category, 0.0)
 
-             PropertyCharge.objects.create(charge = self , property = property , part = (part_percentage /100 ) * self.price )
+             PropertyCharge.objects.create(charge = self , property = property , part = (part_percentage /100 ) * float(self.price) )
 
 class PropertyCharge (models.Model) :
     
@@ -32,6 +32,7 @@ class PropertyCharge (models.Model) :
     part = models.FloatField()
     def __str__(self):
         return self.charge.title+ " - "+self.property.property_type + " " + str(self.property.property_number)
+
 
 
 

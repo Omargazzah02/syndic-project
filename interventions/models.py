@@ -25,3 +25,5 @@ class Intervention(models.Model):
 
     def __str__(self):
         return f"{self.type} - {self.user.username} - {self.status}"
+
+
