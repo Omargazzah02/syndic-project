@@ -9,9 +9,8 @@ class Charge (models.Model) :
     title = models.CharField(max_length=100)
     category= models.CharField(max_length=50, choices=CHARGE_CATEGORIES)
     date_creation = models.DateTimeField(auto_now_add=True)
-
-
     price = models.FloatField()
+
 
     def __str__(self):
        
@@ -19,6 +18,9 @@ class Charge (models.Model) :
     def save(self , *args, **kwargs)  :
          is_new = self.pk is None  # On vérifie si c'est une création
          super().save(*args, **kwargs)  # D'abord on sauvegarde la Charge elle-même
+
+         if not is_new:
+           self.properties.all().delete()
          properties = self.residence.properties.all()
          for property in properties :
              part_percentage = property.category_shares.get(self.category, 0.0)

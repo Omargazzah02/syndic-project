@@ -7,6 +7,10 @@ from rest_framework.permissions import IsAuthenticated
 from auth_app.permissions import IsOwner , IsManager
 from charges_app.models import Charge
 from django.views.decorators.csrf import csrf_exempt
+from django.core.validators import FileExtensionValidator
+from django.core.exceptions import ValidationError
+
+
 
 
 class InterventionListByResidenceAPIView(APIView):
@@ -40,7 +44,7 @@ class CreateInterventionAPIView(APIView):
 
 
 # views.py (extrait pour DELETE)
-class InterventionDetail(APIView):
+class InterventionDeleteView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def delete(self, request, pk):
@@ -70,13 +74,17 @@ class AcceptInterventionView(APIView) :
          
          title = request.data.get("charge_title")
          category =request.data.get("category")
-         price = request.data.get("charge_price")
+         price = float (request.data.get("charge_price"))
+     
+
+
+
 
          intervention.status = "en_cours"
          intervention.save()
 
-         Charge.objects.create(residence = intervention.residence , title = title , category = category , price = price  )
-
+         Charge.objects.create(residence = intervention.residence , title = title , category = category , price = price)
+  
          return Response({"message":"Vous avez confimé cette intervention avec succées"}, status=status.HTTP_200_OK)
 
 
