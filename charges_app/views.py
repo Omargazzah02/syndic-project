@@ -66,7 +66,6 @@ class AddChargeView (generics.ListAPIView) :
 
        charge_category = request.data.get('charge_category')
 
-       print (charge_category , charge_price , charge_title)
 
        Charge.objects.create(residence = residence , title = charge_title , category = charge_category , price = charge_price)
        return Response({"message":"Vous avez bien créé un charge avec succès."}, status=status.HTTP_201_CREATED)
