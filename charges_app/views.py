@@ -8,6 +8,8 @@ from rest_framework.response import Response
 from documents_app.models import Invoice
 from residences_app.models import Residence
 from .serializers import ChargeSerializer
+from documents_app.models import Invoice
+
 
 #  Create your views here.
 
@@ -62,12 +64,21 @@ class AddChargeView (generics.ListAPIView) :
        
        charge_title = request.data.get('charge_title')
        charge_price = float (request.data.get('charge_price'))
+       pdf_file = request.FILES.get('pdf_file')
+
 
 
        charge_category = request.data.get('charge_category')
+       charge =  Charge.objects.create(residence = residence , title = charge_title , category = charge_category , price = charge_price   )
+
+       if pdf_file is not None  : 
+            Invoice.objects.create(residence = residence , category = "Invoice" ,  title = "Invoice " + charge_title , pdf_file = pdf_file , charge = charge    )
+
+          
 
 
-       Charge.objects.create(residence = residence , title = charge_title , category = charge_category , price = charge_price)
+
+       
        return Response({"message":"Vous avez bien créé un charge avec succès."}, status=status.HTTP_201_CREATED)
 
 
@@ -109,7 +120,6 @@ class DeleteChargeView (generics.ListAPIView):
 
             
 
-            
         
 
        

@@ -9,6 +9,7 @@ from charges_app.models import Charge
 from django.views.decorators.csrf import csrf_exempt
 from django.core.validators import FileExtensionValidator
 from django.core.exceptions import ValidationError
+from documents_app.models import Invoice
 
 
 
@@ -75,15 +76,22 @@ class AcceptInterventionView(APIView) :
          title = request.data.get("charge_title")
          category =request.data.get("category")
          price = float (request.data.get("charge_price"))
+         pdf_file = request.FILES.get('pdf_file')
      
-
 
 
 
          intervention.status = "en_cours"
          intervention.save()
 
-         Charge.objects.create(residence = intervention.residence , title = title , category = category , price = price)
+         charge =    Charge.objects.create(residence = intervention.residence , title = title , category = category , price = price)
+
+         if pdf_file is not None :
+             Invoice.objects.create(residence = intervention.residence , category = "Invoice" ,  title = "Invoice " + charge.title , pdf_file = pdf_file , charge = charge )
+             
+
+
+
   
          return Response({"message":"Vous avez confimé cette intervention avec succées"}, status=status.HTTP_200_OK)
 
