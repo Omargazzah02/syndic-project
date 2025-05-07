@@ -82,3 +82,36 @@ class DocumentUploadView(APIView):
        
           
         
+
+
+class AllDocumentsListView(APIView):
+    permission_classes = [IsAuthenticated, IsManager]
+
+    def get(self, request, residence_id):
+        residence = Residence.objects.filter(
+            id=residence_id,
+            properties__owner=request.user
+        ).first()
+        
+        if residence is None:
+            return Response({"error": "Cette résidence n'existe pas."}, status=status.HTTP_404_NOT_FOUND)
+
+        documents = residence.documents.all()
+        serializer = DocumentSerializer(documents, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class DocumentDeleteView(APIView):
+    permission_classes = [IsAuthenticated, IsManager]
+
+    def delete(self, request, residence_id, document_id):
+        from .models import Document  # If not already imported at the top
+
+        try:
+            document = Document.objects.get(id=document_id, residence__id=residence_id)
+        except Document.DoesNotExist:
+            return Response({"error": "Document introuvable pour cette résidence."}, status=status.HTTP_404_NOT_FOUND)
+
+        document.delete()
+        return Response({"message": "Document supprimé avec succès."}, status=status.HTTP_204_NO_CONTENT)
+
