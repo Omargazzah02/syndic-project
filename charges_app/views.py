@@ -22,7 +22,7 @@ class ChargesListView(generics.ListAPIView) :
        for property in properties :
           property_data =  {
                "property_id" : property.id,
-               "property_tiltle" : property.property_type + str(property.property_number),
+               "property_title" : property.property_type +" "+str(property.property_number),
                "charges" : []
 
              }

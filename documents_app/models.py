@@ -20,6 +20,8 @@ class Document (models.Model) :
     title = models.CharField(max_length=100)
     pdf_file = models.FileField(upload_to='pdfs/',  validators=[FileExtensionValidator(allowed_extensions=['pdf'])] ,)
     date_creation = models.DateTimeField(auto_now_add=True)
+    summary = models.TextField(default="")
+
 
 
     def __str__(self):
