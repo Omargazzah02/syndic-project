@@ -6,9 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from .permissions import IsOwner, IsManager, IsAdmin
 from rest_framework import status
 from .serializers import UserSerializer
-from django.contrib.auth import get_user_model
-
-
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 
 
 
@@ -45,30 +44,29 @@ class LoginView(APIView):
         })
 
 
+
 class ModifyPasswordView(APIView):
-    permission_classes = [IsOwner]  
+    permission_classes = [IsAuthenticated,IsOwner]  # Or your custom IsOwner permission
 
     def put(self, request):
-        # Récupérer les données envoyées
         old_password = request.data.get("old_password")
         new_password = request.data.get("new_password")
         
-        # Vérifier si les informations sont présentes
         if not old_password or not new_password:
             return Response({"error": "Ancien mot de passe et nouveau mot de passe requis."}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Authentifier l'utilisateur avec l'ancien mot de passe
-        user = authenticate(request, username=request.user.username, password=old_password)
-        
-        if user is None:
+        if not request.user.check_password(old_password):
             return Response({"error": "L'ancien mot de passe est incorrect."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Mettre à jour le mot de passe
-        user.set_password(new_password)
-        user.save()
-        
+
+        try:
+            validate_password(new_password, user=request.user)
+        except ValidationError as e:
+            return Response({"error": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.set_password(new_password)
+        request.user.save()
+
         return Response({"message": "Mot de passe modifié avec succès."}, status=status.HTTP_200_OK)
-    
 
 
 
@@ -85,6 +83,8 @@ class UpdateProfileView(APIView):
         username = data.get("username")
         email = data.get("email")
         phone = data.get("phone")
+        first_name = data.get("first_name")
+        last_name = data.get("last_name")
 
         # Optional: validate required fields
         if not username or  not email:
@@ -96,7 +96,9 @@ class UpdateProfileView(APIView):
         # Update user fields
         user.username = username
         user.email = email
-        user.phone = phone  # Ensure this field exists in your CustomUser model
+        user.phone = phone 
+        user.first_name = first_name
+        user.last_name = last_name
 
         user.save()
 

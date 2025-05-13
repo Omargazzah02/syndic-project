@@ -10,6 +10,15 @@ from transformers import pipeline
 import PyPDF2
 import io
 import time
+from pdf2image import convert_from_bytes
+import pytesseract
+import logging
+
+
+
+
+
+
 
 # Create your views here.
 
@@ -80,172 +89,142 @@ class DocumentDeleteView(APIView):
 
 
 
-    
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Initialize the summarizer model outside of the class to avoid reloading it for each request
+# Initialize the summarizer pipeline
 try:
     summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 except Exception as e:
-    print(f"Error loading summarization model: {str(e)}")
+    logger.error(f"Failed to load summarization model: {e}")
     summarizer = None
+
+def extract_text_from_pdf(pdf_file, language='fra'):
+    try:
+        # Read file content
+        content = pdf_file.read()
+        pdf_file.seek(0)  # Reset pointer for Django file field
+        
+        # Try to extract text directly from PDF
+        reader = PyPDF2.PdfReader(io.BytesIO(content))
+        
+        full_text = ''
+        has_extractable_text = False
+        
+        for page_num, page in enumerate(reader.pages):
+            page_text = page.extract_text()
+            if page_text and len(page_text.strip()) > 50:
+                has_extractable_text = True
+                full_text += page_text + "\n"
+        
+        if not has_extractable_text:
+            ocr_text = extract_text_with_ocr(content, language)
+            if ocr_text:
+                full_text = ocr_text
+        
+        cleaned_text = ' '.join(full_text.split())  # Normalize whitespace
+        return cleaned_text
+    
+    except Exception as e:
+        logger.error(f"PDF text extraction failed: {str(e)}")
+        return ""
+
+def extract_text_with_ocr(content, language='fra'):
+
+    try:
+        images = convert_from_bytes(
+            content,
+            dpi=300,  
+            fmt='jpeg',
+            grayscale=False,
+            size=(1700, None),
+            poppler_path=r"C:\poppler\poppler-24.08.0\Library\bin"
+        )
+        
+        if not images:
+            logger.error("Failed to convert PDF to images")
+            return ""
+        
+        text = ""
+        for image in images:
+            enhanced_image = enhance_image_for_ocr(image)
+            ocr_text = pytesseract.image_to_string(enhanced_image, lang=language, config='--psm 1')
+            if ocr_text:
+                text += ocr_text + "\n"
+        
+        return text
+    
+    except Exception as e:
+        logger.error(f"OCR processing failed: {str(e)}")
+        return ""
+
+def enhance_image_for_ocr(image):
+
+    try:
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        return image
+    except Exception as e:
+        logger.error(f"Image enhancement failed: {str(e)}")
+        return image
+
+def generate_summary(text, fallback_summary):
+
+    if text and len(text.strip()) > 100:
+        try:
+            if summarizer:
+                text_for_summary = text[:10000]  # Limit to first 10000 chars to be safe
+                summary = summarizer(text_for_summary, max_length=150, min_length=50, do_sample=False)
+                return summary[0]['summary_text']
+        except Exception as e:
+            logger.error(f"Summarization failed: {str(e)}")
+        
+        # Fallback to basic summarization (first 3 sentences)
+        sentences = text.split('.')[:3]
+        return '. '.join(sentences) + '.'
+    
+    logger.info(f"Using fallback summary: {fallback_summary}")
+    return fallback_summary
 
 class DocumentUploadView(APIView):
     permission_classes = [IsAuthenticated, IsManager]
-    
+
     def post(self, request, residence_id):
-        # Debug info - helpful for troubleshooting
-        print("Request data:", request.data)
-        print("Request FILES:", request.FILES)
-        
-        # Check if residence exists
         try:
             residence = Residence.objects.get(id=residence_id)
         except Residence.DoesNotExist:
             return Response({"error": "Cette résidence n'existe pas."}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Check if file is in request
-        if 'pdf_file' not in request.FILES:
-            return Response({"error": "Aucun fichier PDF trouvé dans la requête."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Get the PDF file
+
         pdf_file = request.FILES.get('pdf_file')
-        
-        # Check for required fields
         title = request.data.get('title')
         category = request.data.get('category')
         
-        if not title:
-            return Response({"error": "Le titre est requis."}, status=status.HTTP_400_BAD_REQUEST)
-        if not category:
-            return Response({"error": "La catégorie est requise."}, status=status.HTTP_400_BAD_REQUEST)
+        if not pdf_file or not title or not category:
+            return Response({"error": "Le fichier, le titre et la catégorie sont requis."}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Create a default summary in case everything fails
-        default_summary = f"Document {title} ({category})"
-        summary_text = default_summary
+        language = request.data.get('language', 'fra')
+        fallback_summary = f"Document {title} ({category})"
         
-        # Extract text from the PDF
-        try:
-            # Create a copy of the file for text extraction
-            pdf_content = pdf_file.read()
-            pdf_file.seek(0)  # Reset file pointer for later serialization
-            
-            # Use BytesIO to create a file-like object from the content
-            pdf_io = io.BytesIO(pdf_content)
-            reader = PyPDF2.PdfReader(pdf_io)
-            
-            text = ""
-            for page in reader.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text
-                    
-            # Remove excessive whitespace and normalize text
-            text = ' '.join(text.split())
-            
-            print(f"Extracted text length: {len(text)} characters")
-            if len(text) > 0:
-                print(f"Text sample: {text[:200]}...")
-            
-            # Check if we have enough text to summarize
-            if not text or len(text) < 50:
-                # If text is very short, just use it as is or default
-                summary_text = text if text else default_summary
-                print(f"Text too short, using as summary: {summary_text}")
-            elif summarizer is None:
-                # If the model failed to load, use first few sentences
-                sentences = text.split('.')[:3]
-                summary_text = '. '.join(sentences) + '.'
-                print(f"No model available, using first sentences: {summary_text}")
-            else:
-                try:
-                    # Clean up excessive whitespace and prepare for summarization
-                    text_for_summary = text.strip()
-                    
-                    # Ensure text isn't too long for model
-                    if len(text_for_summary) > 1000:
-                        text_for_summary = text_for_summary[:1000]
-                    
-                    print("Attempting to summarize with model...")
-                    # Generate summary with better parameters
-                    result = summarizer(
-                        text_for_summary, 
-                        max_length=150,  # Maximum length of summary
-                        min_length=30,   # Minimum length of summary
-                        do_sample=False, # For more deterministic results
-                        truncation=True  # Ensure we don't exceed model limits
-                    )
-                    
-                    generated_summary = result[0]['summary_text'].strip()
-                    print(f"Generated summary: {generated_summary}")
-                    
-                    # Only use the generated summary if it's not empty
-                    if generated_summary and len(generated_summary) > 10:
-                        summary_text = generated_summary
-                    else:
-                        # Fallback if summary is too short
-                        sentences = text.split('.')[:3]
-                        summary_text = '. '.join(sentences) + '.'
-                        print(f"Generated summary too short, using first sentences: {summary_text}")
-                        
-                except Exception as e:
-                    print(f"Summarization failed: {str(e)}")
-                    # Fallback to first few sentences
-                    sentences = text.split('.')[:3]
-                    summary_text = '. '.join(sentences) + '.'
-                    print(f"Error in summarization, using first sentences: {summary_text}")
-                    
-        except Exception as e:
-            print(f"PDF processing error: {str(e)}")
-            # Stick with default summary
-            print(f"Using default summary due to error: {summary_text}")
+        extracted_text = extract_text_from_pdf(pdf_file, language)
+        summary = generate_summary(extracted_text, fallback_summary)
         
-        # Final check - ENSURE summary is not empty
-        if not summary_text or len(summary_text.strip()) == 0:
-            summary_text = default_summary
-            print(f"Empty summary detected, using default: {summary_text}")
-            
-        print(f"Final summary to be saved: {summary_text}")
-        
-        # Create serializer with all data including summary
         data = {
             'title': title,
             'category': category,
             'pdf_file': pdf_file,
-            'summary': summary_text  # This should never be blank
+            'summary': summary
         }
         
         serializer = DocumentSerializer(data=data)
-        
         if serializer.is_valid():
-            # Save document with residence
             document = serializer.save(residence=residence)
-            
-            print(f"Document saved with ID: {document.id}")
-            print(f"Saved summary: {document.summary}")
-            
             return Response({
-                'message': 'Document uploaded and summarized successfully.',
+                'message': 'Document uploaded and processed successfully.',
                 'document_id': document.id,
-                'summary': document.summary
+                'summary': document.summary,
+                'text_extracted': bool(extracted_text),
+                'text_length': len(extracted_text) if extracted_text else 0
             }, status=status.HTTP_201_CREATED)
-        else:
-            print("Serializer errors:", serializer.errors)
-            
-            # Special handling for summary validation errors
-            if 'summary' in serializer.errors:
-                print("CRITICAL: Summary validation still failed!")
-                # Force a guaranteed valid summary with timestamp to ensure uniqueness
-                timestamp = int(time.time())
-                data['summary'] = f"Document {title} ({timestamp})"
-                
-                serializer = DocumentSerializer(data=data)
-                if serializer.is_valid():
-                    document = serializer.save(residence=residence)
-                    return Response({
-                        'message': 'Document uploaded with fallback summary.',
-                        'document_id': document.id,
-                        'summary': document.summary
-                    }, status=status.HTTP_201_CREATED)
-            
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
