@@ -8,8 +8,11 @@ from rest_framework import status
 from .serializers import UserSerializer
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.contrib.auth.signals import user_logged_in  # 👈 import the signal
 
-
+from .models import UserLoginHistory
+from .predictor import update_user_prediction  # 👈 Make sure this is imported
+from django.utils.timezone import now  # optional if you want to set timestamp
 
 
 
@@ -17,11 +20,9 @@ from django.core.exceptions import ValidationError
 
 class LoginView(APIView):
     def post(self, request):
-        # Vérifie que les données nécessaires sont présentes dans la requête
         username = request.data.get("username")
         password = request.data.get("password")
 
-        # Vérifie si le nom d'utilisateur et le mot de passe sont fournis
         if not username or not password:
             return Response({'error': 'Nom d\'utilisateur et mot de passe sont requis.'}, status=400)
 
@@ -33,6 +34,12 @@ class LoginView(APIView):
         if user is None:
             return Response({'error': 'Nom d\'utilisateur ou mot de passe incorrect.'}, status=400)
 
+        # 🔐 Save login history
+        UserLoginHistory.objects.create(user=user)
+
+        # 🤖 Trigger prediction update for this user
+        update_user_prediction(user)
+
         try:
             refresh = RefreshToken.for_user(user)
         except Exception as e:
@@ -42,7 +49,6 @@ class LoginView(APIView):
             "access": str(refresh.access_token),
             "role": user.role
         })
-
 
 
 class ModifyPasswordView(APIView):

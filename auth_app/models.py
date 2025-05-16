@@ -54,3 +54,32 @@ class CustomUser(AbstractUser):
 
     def is_admin(self):
         return self.role == 'admin'
+    
+
+
+class UserLoginHistory(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} logged in at {self.timestamp}"
+
+
+
+class UserLoginPrediction(models.Model):
+    DAYS = [
+        ("Monday", "Monday"),
+        ("Tuesday", "Tuesday"),
+        ("Wednesday", "Wednesday"),
+        ("Thursday", "Thursday"),
+        ("Friday", "Friday"),
+        ("Saturday", "Saturday"),
+        ("Sunday", "Sunday"),
+    ]
+
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    predicted_day = models.CharField(max_length=10, choices=DAYS)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} usually logs in on {self.predicted_day}"
