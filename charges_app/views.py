@@ -43,7 +43,8 @@ class ChargesListView(generics.ListAPIView) :
                   "charge_title" : property_charge.charge.title,
                   "part" : property_charge.part,
                   "date_creation" : formatted_date,
-                  "invoice_url" : invoice_url
+                  "invoice_url" : invoice_url,
+                  "category" : property_charge.charge.category,
 
                })
           data.append(property_data)

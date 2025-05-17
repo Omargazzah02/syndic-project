@@ -1,6 +1,5 @@
 from django.db import models
-from choices import CHARGE_CATEGORIES
-from django.core.exceptions import ValidationError
+
 
 
 class Residence (models.Model):

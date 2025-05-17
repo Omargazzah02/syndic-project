@@ -5,9 +5,21 @@ from choices import CHARGE_CATEGORIES
 
 # Create your models here.
 class Charge (models.Model) : 
+ #   CHARGE_CATEGORIES = [
+    #("charges_generales", "Charges Générales"),
+    #("ascenseur", "Ascenseur"),
+    #("testing", "testing"),
+
+    #les charges des interventions
+    #('plomberie', 'Plomberie'),
+    #('électricité', 'Électricité'),
+    #('jardinage', 'Jardinage'),
+#    ('nettoyage', 'Nettoyage'),
+#]
+
     residence = models.ForeignKey(Residence, on_delete=models.CASCADE, related_name='charges')
     title = models.CharField(max_length=100)
-    category= models.CharField(max_length=50)
+    category= models.CharField(max_length=50, choices=CHARGE_CATEGORIES)
     date_creation = models.DateTimeField(auto_now_add=True)
     price = models.FloatField()
 
