@@ -3,6 +3,8 @@ from residences_app.models import Residence
 from properties_app.models import Property
 from choices import CHARGE_CATEGORIES
 
+
+
 # Create your models here.
 class Charge (models.Model) : 
  #   CHARGE_CATEGORIES = [
@@ -53,6 +55,20 @@ class PropertyCharge (models.Model) :
 
 
 
+
+class ChargePrediction(models.Model):
+    residence = models.ForeignKey(Residence, on_delete=models.CASCADE)
+    category = models.CharField(max_length=100)
+    predicted_price = models.FloatField()
+    year = models.IntegerField()
+    month = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('residence', 'category', 'year', 'month')
+
+    def __str__(self):
+        return f"{self.category}  ({self.month}/{self.year})"
 
 
 

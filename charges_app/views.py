@@ -8,8 +8,16 @@ from rest_framework.response import Response
 from documents_app.models import Invoice
 from residences_app.models import Residence
 from .serializers import ChargeSerializer
-from documents_app.models import Invoice
 from rest_framework.views import APIView
+from django.utils.timezone import localtime
+from datetime import datetime, timedelta
+
+
+
+
+
+from .predictor import predict_next_month_charges
+from .models import ChargePrediction
 
 
 #  Create your views here.
@@ -26,9 +34,11 @@ class ChargesListView(generics.ListAPIView) :
                "charges" : []
 
              }
-          properties_charges = PropertyCharge.objects.filter(property = property )
+          properties_charges = PropertyCharge.objects.filter(property=property).order_by('-charge__date_creation')
+
           for property_charge in properties_charges :
-               formatted_date = property_charge.charge.date_creation.strftime("%d/%m/%Y : %H:%M")
+               formatted_date = localtime(property_charge.charge.date_creation).strftime("%d/%m/%Y : %H:%M")
+
                try:
                    invoice = Invoice.objects.get(charge = property_charge.charge)
                    invoice_url = invoice.pdf_file.url
@@ -96,7 +106,7 @@ class ChargesManagingListView (generics.ListAPIView) :
         exists = managers.filter(id = request.user.id).exists()
         if exists is not True : 
              return Response({"error": "Vous n'avez pas un manager dans cette résidance."}, status=status.HTTP_401_UNAUTHORIZED)
-        charges = residence.charges.all()
+        charges = residence.charges.all().order_by('-date_creation')
         serialized_charges = ChargeSerializer(charges , many = True)
         return Response(serialized_charges.data, status=status.HTTP_200_OK)
 
@@ -182,5 +192,43 @@ class UpdateChargeView(APIView):
     
            
 
+
+
+class PredictChargesView(APIView):
+    def post(self, request):
+        residence_id = request.data.get("residence_id")
+        categories = request.data.get("categories")
+
+        if not residence_id or not categories:
+            return Response({"error": "residence_id and categories are required."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            predictions = predict_next_month_charges(residence_id, categories)
+        except FileNotFoundError as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Get year/month for storage
+        today = datetime.today()
+        next_month = today.replace(day=1) + timedelta(days=32)
+        year, month = next_month.year, next_month.month
+
+        # Save to DB
+        saved = []
+        for category, price in predictions.items():
+            pred, created = ChargePrediction.objects.update_or_create(
+                residence_id=residence_id,
+                category=category,
+                year=year,
+                month=month,
+                defaults={"predicted_price": price}
+            )
+            saved.append({
+                "category": category,
+                "predicted_price": price,
+                "saved": created or not created
+            })
+
+        return Response({"predictions": saved}, status=status.HTTP_200_OK)
 
         
